@@ -2,6 +2,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from functools import singledispatchmethod
+from typing import Union, Type
 
 from adt import adt, Case
 
@@ -12,9 +13,6 @@ class Constant:
 
     def __str__(self) -> str:
         return str(self.value)
-
-    # def __repr__(self) -> str:
-    #     return str(self)
 
 
 class Combinator(ABC):
@@ -30,74 +28,8 @@ class Combinator(ABC):
     def to_string(cls) -> str:
         pass
 
-    # def __repr__(self) -> str:
-    #     return self.to_string()
-
-
-@adt
-class FunctionSlot:
-    COMBINATOR: Case[Combinator]
-    SUBTREE: Case[Node]
-
-    # @singledispatchmethod
-    # @staticmethod
-    # def new(in_slot):
-    #     raise NotImplementedError(f"Cannot place {type(in_slot)} into function slot.")
-    #
-    # @new.register
-    # def _(in_slot: Combinator):
-    #     return FunctionSlot.COMBINATOR(in_slot)
-    #
-    # @new.register
-    # def _(in_slot: Node):
-    #     return FunctionSlot.SUBTREE(in_slot)
-
     def __str__(self) -> str:
-        return self.match(
-            combinator=lambda c: c.to_string(),
-            subtree=lambda t: str(t)
-        )
-
-    # def __repr__(self) -> str:
-    #     return str(self)
-
-
-@adt
-class ArgumentSlot:
-    COMBINATOR: Case[Combinator]
-    SUBTREE: Case[Node]
-    CONSTANT: Case[Constant]
-
-    # @singledispatchmethod
-    # @staticmethod
-    # def new(in_slot) -> ArgumentSlot:
-    #     raise NotImplementedError(f"Cannot place {type(in_slot)} into argument slot.")
-    #
-    # @new.register
-    # def _(in_slot: Combinator) -> ArgumentSlot:
-    #     return ArgumentSlot.COMBINATOR(in_slot)
-    #
-    # @new.register
-    # def _(in_slot: Node) -> ArgumentSlot:
-    #     return ArgumentSlot.SUBTREE(in_slot)
-    #
-    # @new.register
-    # def _(in_slot: Constant) -> ArgumentSlot:
-    #     return ArgumentSlot.CONSTANT(in_slot)
-    #
-    # @new.register
-    # def _(in_slot: float) -> ArgumentSlot:
-    #     return ArgumentSlot.CONSTANT(Constant(in_slot))
-
-    def __str__(self) -> str:
-        return self.match(
-            combinator=lambda c: c.to_string(),
-            subtree=lambda t: str(t),
-            constant=lambda c: str(c)
-        )
-
-    # def __repr__(self) -> str:
-    #     return str(self)
+        return self.to_string()
 
 
 @dataclass
@@ -105,8 +37,9 @@ class Node:
     function_slot: FunctionSlot
     argument_slot: ArgumentSlot
 
-    def new(self, in_function_slot, in_argument_slot) -> Node:
-        return Node(
+    @classmethod
+    def new(cls, in_function_slot, in_argument_slot) -> Node:
+        return cls(
             function_slot=FunctionSlot.new(in_function_slot),
             argument_slot=ArgumentSlot.new(in_argument_slot)
         )
@@ -114,5 +47,52 @@ class Node:
     def __str__(self) -> str:
         return f"[{self.function_slot} | {self.argument_slot}]"
 
-    # def __repr__(self) -> str:
-    #     return str(self)
+
+@dataclass
+class FunctionSlot:
+    slot: Union[Combinator, Node]
+
+    @classmethod
+    def new(cls, in_slot):
+        return FunctionSlot(in_slot)
+
+    def __str__(self) -> str:
+        return str(self.slot)
+
+
+@dataclass
+class ArgumentSlot:
+    slot: Union[Combinator, Node, Constant]
+
+    @singledispatchmethod
+    @classmethod
+    def new(cls, in_slot):
+        raise NotImplementedError(f"Cannot place {type(in_slot)} into argument slot.")
+
+    @new.register
+    @classmethod
+    def _(cls, in_slot: Combinator):
+        return cls(in_slot)
+
+    @new.register
+    @classmethod
+    def _(cls, in_slot: Node):
+        return cls(in_slot)
+
+    @new.register
+    @classmethod
+    def _(cls, in_slot: Constant):
+        return cls(in_slot)
+
+    @new.register
+    @classmethod
+    def _(cls, in_slot: float):
+        return cls.new(Constant(in_slot))
+
+    @new.register
+    @classmethod
+    def _(cls, in_slot: int):
+        return cls.new(float(in_slot))
+
+    def __str__(self) -> str:
+        return str(self.slot)

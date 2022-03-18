@@ -25,3 +25,6 @@ class SpineStack:
 
     def __len__(self):
         return len(self.stack)
+
+    def __str__(self):
+        return str(self.stack)

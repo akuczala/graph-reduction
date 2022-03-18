@@ -1,4 +1,4 @@
-from graph import Combinator, ArgumentSlot, FunctionSlot
+from graph import Combinator, ArgumentSlot, FunctionSlot, Constant
 from stack import SpineStack
 from utils import raise_exception
 
@@ -12,11 +12,11 @@ class I(Combinator):
             stack.pop()
             return
         parent, node = stack.peek_at_last(2)
-        parent.function_slot = node.argument_slot.match(
-            combinator=lambda c: FunctionSlot.COMBINATOR(c),
-            subtree=lambda t: FunctionSlot.SUBTREE(t),
-            constant=lambda c: parent.function_slot
-        )
+        match node.argument_slot:
+            case Constant():
+                pass
+            case _ as c:
+                parent.function_slot = c
         stack.pop()
 
     @classmethod
@@ -32,12 +32,8 @@ class K(Combinator):
         x = parent.argument_slot  # gets thrown away
         c = node.argument_slot
 
-        parent.function_slot = FunctionSlot.COMBINATOR(I)
-        parent.argument_slot = c.match(
-            combinator=lambda c: ArgumentSlot.COMBINATOR(c),
-            subtree=lambda t: ArgumentSlot.SUBTREE(t),
-            constant=lambda c: ArgumentSlot.CONSTANT(c)
-        )
+        parent.function_slot = FunctionSlot.new(I())
+        parent.argument_slot = c
         stack.pop()
 
     @classmethod

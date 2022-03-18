@@ -4,20 +4,43 @@ from stack import SpineStack
 
 
 def init_test():
-    #node = Node(function_slot=FunctionSlot.COMBINATOR(I), argument_slot=ArgumentSlot.CONSTANT(Constant(5)))
-    node1 = Node(function_slot=FunctionSlot.COMBINATOR(K), argument_slot=ArgumentSlot.CONSTANT(5))
-    node0 = Node(function_slot=FunctionSlot.SUBTREE(node1), argument_slot=ArgumentSlot.COMBINATOR(K))
-    print(str(node0))
-    stack = SpineStack().push(node0)
-    eval_stack(stack)
-    print(str(node0))
+    node0 = Node.new(K(), I())
+    node1 = Node.new(node0, I())
+    node2 = Node.new(I(), node1)
+    top_node = node2
+    print(top_node)
+    #stack = SpineStack().push(node0)
+    #eval_stack(stack)
+    evaluate(top_node)
+    print(top_node)
 
+
+# todo figure out how this is actually supposed to work
 def eval_stack(stack: SpineStack):
     node = stack.peek()
     # todo: do imperatively rather than recursively
-    node.function_slot.match(
-        combinator=lambda c: c.eval(stack),
-        subtree=lambda n: eval_stack(stack.push(n))
-    )
+    while len(stack) > 0:
+        match node.function_slot.slot:
+            case Combinator() as c:
+                c.eval(stack)
+            case Node(function_slot=f, argument_slot=a) as n:
+                eval_stack(stack.push(n))
+            case _:
+                raise Exception(f"No match on {node.function_slot.slot}!")
+
+    print(stack)
+
+def evaluate(top_node: Node):
+    stack = SpineStack().push(top_node)
+    while len(stack) > 0:
+        node = stack.peek()
+        match node.function_slot.slot:
+            case Combinator() as c:
+                c.eval(stack)
+            case Node(function_slot=f, argument_slot=a) as n:
+                stack.push(n)
+            case _:
+                raise Exception(f"No match on {node.function_slot.slot}!")
+    return top_node
 
 init_test()
