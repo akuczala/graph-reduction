@@ -1,6 +1,6 @@
 from graph import GraphElement
 from ski import K, I, S
-from utils import left_associate
+from utils import left_associate as la
 
 
 def graph_example_1():
@@ -11,7 +11,7 @@ def graph_example_1():
 
 
 def graph_example_2():
-    return left_associate(S, K, K, 5)
+    return la(S, K, K, 5)
 
 
 def graph_example_3():
@@ -20,6 +20,11 @@ def graph_example_3():
 
 
 def graph_example_4():
-    # S (S K K I) K I
-    la = left_associate
-    return la(S, la(S, K, K, I), K, I)  # = KI
+    # S (S K K I) K I = KI
+    return la(S, la(S, K, K, I), K, I)
+
+
+def graph_example_5():
+    # same as 4 but S doesn't have all its arguments. Can be simplified regardless
+    # S (S K K I) K = SIK
+    return la(S, la(S, K, K, I), K)

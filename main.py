@@ -31,8 +31,8 @@ def eval_stack(stack: SpineStack, verbose=False):
             print('-----')
 
 
-def evaluate(graph: GraphElement) -> GraphElement:
-    eval_stack(SpineStack().push(graph))
+def evaluate(graph: GraphElement, verbose=False) -> GraphElement:
+    eval_stack(SpineStack().push(graph), verbose=verbose)
     return graph
 
 
