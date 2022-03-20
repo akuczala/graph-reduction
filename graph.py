@@ -2,18 +2,30 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from functools import singledispatchmethod
-from typing import Union
+from typing import TypeVar, Callable
 
 
-@dataclass
-class Constant:
+# GraphElementValue = Union[Combinator, Node, Constant]
+class GraphElementValue(ABC):
+    @abstractmethod
+    def eval_and_update_stack(self, stack):
+        pass
+
+
+@dataclass(frozen=True)
+class Constant(GraphElementValue):
     value: float
 
     def __str__(self) -> str:
         return str(self.value)
 
+    def eval_and_update_stack(self, stack, verbose=False):
+        if verbose:
+            print(f"encountered constant {self.value}. Should be done.")
+        stack.pop()
 
-class Combinator(ABC):
+
+class Combinator(GraphElementValue):
 
     @property
     def n_args(cls) -> int:
@@ -43,8 +55,8 @@ class Combinator(ABC):
         return self.to_string()
 
 
-@dataclass
-class Node:
+@dataclass(frozen=True)
+class Node(GraphElementValue):
     function_slot: GraphElement
     argument_slot: GraphElement
 
@@ -55,13 +67,19 @@ class Node:
             argument_slot=GraphElement.new(in_argument_slot)
         )
 
+    def eval_and_update_stack(self, stack):
+        stack.push(self.function_slot)
+
     def __str__(self) -> str:
         return f"[{self.function_slot} | {self.argument_slot}]"
 
 
+T = TypeVar('T')
+
+
 @dataclass
 class GraphElement:
-    value: Union[Combinator, Node, Constant]
+    value: GraphElementValue
 
     @singledispatchmethod
     @classmethod
@@ -106,19 +124,32 @@ class GraphElement:
     def new_node(cls, function_slot, argument_slot):
         return cls.new(Node.new(function_slot, argument_slot))
 
+    def eval_and_update_stack(self, stack, verbose=False):
+        self.value.eval_and_update_stack(stack, verbose=verbose)
+
+    def match_value(self, on_node: Callable[[Node], T], on_combinator: Callable[[Combinator], T],
+                    on_constant: Callable[[Constant], T]) -> T:
+        match self.value:
+            case Node() as n:
+                return on_node(n)
+            case Combinator() as c:
+                return on_combinator(c)
+            case Constant() as c:
+                return on_constant(c)
+            case _:
+                raise ValueError(f"{self.value} of type {type(self.value)} is not a valid graph element value")
+
     def equals_literal(self, other: GraphElement) -> bool:
         if not isinstance(self.value, type(other.value)):
             return False
-        match self.value:
-            case Node():
-                return (
-                        self.value.function_slot.equals_literal(other.value.function_slot) and
-                        self.value.argument_slot.equals_literal(other.value.argument_slot)
-                )
-            case Combinator():
-                return type(self.value) == type(other.value)
-            case Constant():
-                return self.value.value == other.value.value
+        return self.match_value(
+            on_node=lambda n: (
+                    self.value.function_slot.equals_literal(other.value.function_slot) and
+                    self.value.argument_slot.equals_literal(other.value.argument_slot)
+            ),
+            on_combinator=lambda c: type(self.value) == type(other.value),
+            on_constant=lambda c: self.value.value == other.value.value
+        )
 
     def __str__(self) -> str:
         return str(self.value)

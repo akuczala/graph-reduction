@@ -14,18 +14,11 @@ def init_test():
 
 def eval_stack(stack: SpineStack, verbose=False):
     while len(stack) > 0:
-        ge = stack.peek()
-        match ge.value:
-            case Node(function_slot=f, argument_slot=a):
-                stack.push(f)
-            case Combinator() as c:
-                c.eval_and_update_stack(stack, verbose=verbose)
-            case Constant(val):
-                if verbose:
-                    print(f"encountered constant {val}. Should be done.")
-                return
-            case _:
-                raise ValueError(f"{ge.value} of type {type(ge.value)} is not a valid graph element value")
+        stack.peek().match_value(
+            on_node=lambda n: stack.push(n.function_slot),
+            on_combinator=lambda c: c.eval_and_update_stack(stack, verbose=verbose),
+            on_constant=lambda c: c.eval_and_update_stack(stack, verbose=verbose)
+        )
         if verbose:
             print(stack)
             print('-----')
