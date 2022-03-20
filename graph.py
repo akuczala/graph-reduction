@@ -16,11 +16,21 @@ class Constant:
 
 
 class Combinator(ABC):
-    pass
 
-    @classmethod
+    @property
+    def n_args(cls):
+        pass
+
+    def count_args_and_eval(self, stack):
+        if len(stack) < self.n_args + 1:
+            print(f"{self.to_string()} only provided {len(stack) - 1} arguments.")
+            stack.clear()
+            return
+        else:
+            self.eval(stack)
+
     @abstractmethod
-    def eval(cls, stack):
+    def eval(self, stack):
         pass
 
     @classmethod
@@ -34,14 +44,14 @@ class Combinator(ABC):
 
 @dataclass
 class Node:
-    function_slot: FunctionSlot
-    argument_slot: ArgumentSlot
+    function_slot: GraphElement
+    argument_slot: GraphElement
 
     @classmethod
     def new(cls, in_function_slot, in_argument_slot) -> Node:
         return cls(
-            function_slot=FunctionSlot.new(in_function_slot),
-            argument_slot=ArgumentSlot.new(in_argument_slot)
+            function_slot=GraphElement.new(in_function_slot),
+            argument_slot=GraphElement.new(in_argument_slot)
         )
 
     def __str__(self) -> str:
@@ -49,25 +59,21 @@ class Node:
 
 
 @dataclass
-class FunctionSlot:
-    slot: Union[Combinator, Node]
-
-    @classmethod
-    def new(cls, in_slot):
-        return FunctionSlot(in_slot)
-
-    def __str__(self) -> str:
-        return str(self.slot)
-
-
-@dataclass
-class ArgumentSlot:
-    slot: Union[Combinator, Node, Constant]
+class GraphElement:
+    value: Union[Combinator, Node, Constant]
 
     @singledispatchmethod
     @classmethod
     def new(cls, in_slot):
-        raise NotImplementedError(f"Cannot place {type(in_slot)} into argument slot.")
+        if isinstance(in_slot, cls):
+            return in_slot
+        else:
+            raise NotImplementedError(f"{type(in_slot)} is not a valid graph element value.")
+
+    # @new.register
+    # @classmethod
+    # def _(cls, in_slot: GraphElement):
+    #     return in_slot
 
     @new.register
     @classmethod
@@ -87,12 +93,16 @@ class ArgumentSlot:
     @new.register
     @classmethod
     def _(cls, in_slot: float):
-        return cls.new(Constant(in_slot))
+        return cls(Constant(in_slot))
 
     @new.register
     @classmethod
     def _(cls, in_slot: int):
         return cls.new(float(in_slot))
 
+    @classmethod
+    def new_node(cls, function_slot, argument_slot):
+        return cls.new(Node.new(function_slot, argument_slot))
+
     def __str__(self) -> str:
-        return str(self.slot)
+        return str(self.value)

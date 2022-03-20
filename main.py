@@ -1,46 +1,52 @@
-from graph import Node, FunctionSlot, Constant, ArgumentSlot, Combinator
-from ski import I, K
+from graph import Node, Combinator, GraphElement, Constant
+from ski import I, K, S
 from stack import SpineStack
 
 
+def graph_example_1():
+    ge0 = GraphElement.new_node(K(), K())
+    ge1 = GraphElement.new_node(ge0, I())
+    ge2 = GraphElement.new_node(I(), ge1)
+    return ge2
+
+
+def graph_example_2():
+    ge0 = GraphElement.new_node(S(), K())
+    ge1 = GraphElement.new_node(ge0, K())
+    ge2 = GraphElement.new_node(ge1, 5)
+    return ge2
+
+
+def graph_example_3():
+    n = GraphElement.new_node
+    return n(n(n(n(S(), K()), n(K(), I())), S()), K())
+
+
 def init_test():
-    node0 = Node.new(K(), I())
-    node1 = Node.new(node0, I())
-    node2 = Node.new(I(), node1)
-    top_node = node2
-    print(top_node)
-    #stack = SpineStack().push(node0)
-    #eval_stack(stack)
-    evaluate(top_node)
-    print(top_node)
+    top = graph_example_3()
+    print(top)
+    stack = SpineStack().push(top)
+    eval_stack(stack)
+    # evaluate(top)
+    print(top)
 
 
-# todo figure out how this is actually supposed to work
 def eval_stack(stack: SpineStack):
-    node = stack.peek()
-    # todo: do imperatively rather than recursively
     while len(stack) > 0:
-        match node.function_slot.slot:
+        ge = stack.peek()
+        match ge.value:
+            case Node(function_slot=f, argument_slot=a):
+                stack.push(f)
             case Combinator() as c:
-                c.eval(stack)
-            case Node(function_slot=f, argument_slot=a) as n:
-                eval_stack(stack.push(n))
+                c.count_args_and_eval(stack)
+            case Constant(val):
+                print(f"encountered constant {val}. Should be done.")
+                return
             case _:
-                raise Exception(f"No match on {node.function_slot.slot}!")
-
+                raise ValueError(f"{ge.value} of type {type(ge.value)} is not a valid graph element value")
+        print(stack)
+        print('-----')
     print(stack)
 
-def evaluate(top_node: Node):
-    stack = SpineStack().push(top_node)
-    while len(stack) > 0:
-        node = stack.peek()
-        match node.function_slot.slot:
-            case Combinator() as c:
-                c.eval(stack)
-            case Node(function_slot=f, argument_slot=a) as n:
-                stack.push(n)
-            case _:
-                raise Exception(f"No match on {node.function_slot.slot}!")
-    return top_node
 
 init_test()

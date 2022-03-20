@@ -1,22 +1,17 @@
-from graph import Combinator, ArgumentSlot, FunctionSlot, Constant
+from graph import Combinator, GraphElement, Node
 from stack import SpineStack
-from utils import raise_exception
 
 
 class I(Combinator):
-    pass
 
-    @classmethod
-    def eval(cls, stack: SpineStack):
-        if len(stack) == 1:  # we are done!
-            stack.pop()
-            return
-        parent, node = stack.peek_at_last(2)
-        match node.argument_slot:
-            case Constant():
-                pass
-            case _ as c:
-                parent.function_slot = c
+    @property
+    def n_args(self):
+        return 1
+
+    def eval(self, stack: SpineStack):
+        Combinator.eval(self, stack)
+        ge, _self_ge = stack.peek_at_last(2)
+        ge.value = ge.value.argument_slot.value
         stack.pop()
 
     @classmethod
@@ -26,14 +21,17 @@ class I(Combinator):
 
 class K(Combinator):
 
-    @classmethod
-    def eval(cls, stack: SpineStack):
-        parent, node = stack.peek_at_last(2)
-        x = parent.argument_slot  # gets thrown away
-        c = node.argument_slot
+    @property
+    def n_args(self):
+        return 2
 
-        parent.function_slot = FunctionSlot.new(I())
-        parent.argument_slot = c
+    def eval(self, stack: SpineStack):
+        parent, current, _self_ge = stack.peek_at_last(3)
+        # we assume that parent + current are nodes
+        parent_node, current_node = parent.value, current.value
+        parent_node.function_slot.value = I()
+        parent_node.argument_slot.value = current_node.argument_slot.value
+        stack.pop()
         stack.pop()
 
     @classmethod
@@ -42,4 +40,22 @@ class K(Combinator):
 
 
 class S(Combinator):
-    pass
+
+    @property
+    def n_args(self):
+        return 3
+
+    def eval(self, stack):
+        # S x y z
+        ge_z, ge_y, ge_x, _self_ge = stack.peek_at_last(4)
+        z, y, x = [ge.value.argument_slot for ge in [ge_z, ge_y, ge_x]]
+        new_ge_1 = GraphElement.new_node(x, z)
+        new_ge_2 = GraphElement.new_node(y, z)
+        ge_z.value = Node.new(new_ge_1, new_ge_2)
+        stack.pop()
+        stack.pop()
+        stack.pop()
+
+    @classmethod
+    def to_string(cls) -> str:
+        return "S"

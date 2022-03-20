@@ -1,9 +1,9 @@
 from __future__ import annotations
 from typing import List
 
-from graph import Node
+from graph import GraphElement
 
-StackValue = Node
+StackValue = GraphElement
 
 
 class SpineStack:
@@ -23,8 +23,11 @@ class SpineStack:
     def peek_at_last(self, n: int) -> List[StackValue]:
         return self.stack[-n:]
 
+    def clear(self):
+        self.stack =[]
+
     def __len__(self):
         return len(self.stack)
 
     def __str__(self):
-        return str(self.stack)
+        return str([str(s) for s in self.stack])
