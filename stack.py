@@ -7,8 +7,9 @@ StackValue = GraphElement
 
 
 class SpineStack:
-    def __init__(self):
+    def __init__(self, verbose=False):
         self.stack: List[StackValue] = []
+        self.verbose = verbose
 
     def push(self, value: StackValue) -> SpineStack:
         self.stack.append(value)
