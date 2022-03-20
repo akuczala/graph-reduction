@@ -18,16 +18,18 @@ class Constant:
 class Combinator(ABC):
 
     @property
-    def n_args(cls):
+    def n_args(cls) -> int:
         pass
 
-    def count_args_and_eval(self, stack):
+    def eval_and_update_stack(self, stack):
         if len(stack) < self.n_args + 1:
             print(f"{self.to_string()} only provided {len(stack) - 1} arguments.")
             stack.clear()
             return
         else:
             self.eval(stack)
+            for _ in range(self.n_args):
+                stack.pop()
 
     @abstractmethod
     def eval(self, stack):

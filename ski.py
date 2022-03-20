@@ -5,14 +5,12 @@ from stack import SpineStack
 class I(Combinator):
 
     @property
-    def n_args(self):
+    def n_args(self) -> int:
         return 1
 
     def eval(self, stack: SpineStack):
-        Combinator.eval(self, stack)
         ge, _self_ge = stack.peek_at_last(2)
         ge.value = ge.value.argument_slot.value
-        stack.pop()
 
     @classmethod
     def to_string(cls) -> str:
@@ -22,7 +20,7 @@ class I(Combinator):
 class K(Combinator):
 
     @property
-    def n_args(self):
+    def n_args(self) -> int:
         return 2
 
     def eval(self, stack: SpineStack):
@@ -31,8 +29,6 @@ class K(Combinator):
         parent_node, current_node = parent.value, current.value
         parent_node.function_slot.value = I()
         parent_node.argument_slot.value = current_node.argument_slot.value
-        stack.pop()
-        stack.pop()
 
     @classmethod
     def to_string(cls) -> str:
@@ -42,7 +38,7 @@ class K(Combinator):
 class S(Combinator):
 
     @property
-    def n_args(self):
+    def n_args(self) -> int:
         return 3
 
     def eval(self, stack):
@@ -52,9 +48,6 @@ class S(Combinator):
         new_ge_1 = GraphElement.new_node(x, z)
         new_ge_2 = GraphElement.new_node(y, z)
         ge_z.value = Node.new(new_ge_1, new_ge_2)
-        stack.pop()
-        stack.pop()
-        stack.pop()
 
     @classmethod
     def to_string(cls) -> str:

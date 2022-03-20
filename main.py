@@ -38,7 +38,7 @@ def eval_stack(stack: SpineStack):
             case Node(function_slot=f, argument_slot=a):
                 stack.push(f)
             case Combinator() as c:
-                c.count_args_and_eval(stack)
+                c.eval_and_update_stack(stack)
             case Constant(val):
                 print(f"encountered constant {val}. Should be done.")
                 return
@@ -46,7 +46,6 @@ def eval_stack(stack: SpineStack):
                 raise ValueError(f"{ge.value} of type {type(ge.value)} is not a valid graph element value")
         print(stack)
         print('-----')
-    print(stack)
 
 
 init_test()
