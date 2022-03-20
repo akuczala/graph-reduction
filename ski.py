@@ -10,7 +10,7 @@ class I(Combinator):
 
     def eval(self, stack: SpineStack):
         ge, _self_ge = stack.peek_at_last(2)
-        ge.value = ge.value.argument_slot.value
+        ge.value = ge.expect_value(on_node=lambda n: n.argument_slot.value)
 
     @classmethod
     def to_string(cls) -> str:
