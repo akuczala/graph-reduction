@@ -1,6 +1,6 @@
 from functools import reduce
 
-from graph import GraphElement
+from graph import GraphElement, Graph
 
 
 def raise_exception(e: Exception):
@@ -8,4 +8,4 @@ def raise_exception(e: Exception):
 
 
 def left_associate(*s):
-    return reduce(lambda x0, x1: GraphElement.new_node(x0, x1), s)
+    return reduce(lambda x0, x1: Graph.new_node(x0, x1), s)

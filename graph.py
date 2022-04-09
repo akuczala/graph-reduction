@@ -1,7 +1,7 @@
-from abc import abstractmethod, ABC
+from abc import abstractmethod
 from dataclasses import dataclass
 from functools import partial
-from typing import TypeVar, Callable, Union, Type, Dict, cast, Optional
+from typing import TypeVar, Callable, Union, Type, Dict, cast
 
 from adt import adt, Case
 
@@ -20,9 +20,12 @@ class GraphElementValue:
         pass
 
 
+ConstantType = float
+
+
 @dataclass(frozen=True)
 class Constant(GraphElementValue):
-    value: float
+    value: ConstantType
 
     def __str__(self) -> str:
         return str(self.value)
@@ -72,15 +75,8 @@ class Combinator(GraphElementValue):
 
 @dataclass(frozen=True)
 class Node(GraphElementValue):
-    function_slot: Box["GraphElement"]
-    argument_slot: Box["GraphElement"]
-
-    @classmethod
-    def new(cls, in_function_slot, in_argument_slot) -> "Node":
-        return cls(
-            function_slot=Box(GraphElement.new(in_function_slot)),
-            argument_slot=Box(GraphElement.new(in_argument_slot))
-        )
+    function_slot: "Graph"
+    argument_slot: "Graph"
 
     def eval_and_update_stack(self, stack):
         stack.push(self.function_slot)
@@ -105,33 +101,6 @@ class GraphElement:
     CONSTANT: Case[Constant]
     COMBINATOR: Case[Combinator]
     NODE: Case[Node]
-
-    @classmethod
-    def new(cls, in_slot: Union["GraphElement", GraphElementValue, Type[Combinator], float, int]) -> "GraphElement":
-        """
-        Convenience function. singledispatchmethod doesn't quite cut it, so here we are
-        """
-        match in_slot:
-            case s if isinstance(s, GraphElement):
-                return cast(GraphElement, in_slot)
-            case s if isinstance(s, Constant):
-                return cls.CONSTANT(s)
-            case s if isinstance(s, Combinator):
-                return cls.COMBINATOR(s)
-            case s if isinstance(s, Node):
-                return cls.NODE(s)
-            case s if isinstance(s, type(Combinator)):
-                return cls.COMBINATOR(in_slot())  # type: ignore
-            case s if isinstance(s, float):
-                return cls.CONSTANT(Constant(s))
-            case s if isinstance(s, int):
-                return cls.CONSTANT(Constant(float(s)))
-        # had to take this out of case _: to make mypy happy
-        raise NotImplementedError(f"Cannot instantiate GraphElement with {in_slot} of type {type(in_slot)}.")
-
-    @classmethod
-    def new_node(cls, function_slot: "GraphElement", argument_slot: "GraphElement") -> "GraphElement":
-        return cls.NODE(Node.new(function_slot, argument_slot))
 
     def eval_and_update_stack(self, stack):
         self.value.eval_and_update_stack(stack)
@@ -173,4 +142,44 @@ class GraphElement:
             return result
 
 
-Graph = Box[GraphElement]
+class Graph(Box[GraphElement]):
+
+    def __init__(self, value: GraphElement):
+        super().__init__(value)
+
+    @classmethod
+    def new(cls, arg: Union["Graph", GraphElement, GraphElementValue, Type[Combinator], ConstantType, int]):
+        match arg:
+            case GraphElement() as ge:
+                return cls(ge)
+            case Constant() as c:
+                return cls.new_constant(c)
+            case Combinator() as c:
+                return cls.new_combinator(c)
+            case s if isinstance(s, type(Combinator)):
+                return cls.new_combinator(s())  # type: ignore
+            case s if isinstance(s, ConstantType) or isinstance(s, int):
+                return cls.new_constant(s)
+            # had to take this out of case _: to make mypy happy
+        raise NotImplementedError(f"Cannot instantiate GraphElement with {arg} of type {type(arg)}.")
+
+    @classmethod
+    def new_node(cls, function_slot: "Graph", argument_slot: "Graph"):
+        return cls(GraphElement.NODE(Node(function_slot, argument_slot)))
+
+    @classmethod
+    def new_combinator(cls, combinator: "Combinator"):
+        return cls(GraphElement.COMBINATOR(combinator))
+
+    @classmethod
+    def new_constant(cls, constant: Union[Constant, ConstantType]):
+        match constant:
+            case Constant(_) as c:
+                return cls(GraphElement.CONSTANT(c))
+            case c if isinstance(c, ConstantType):
+                return cls(GraphElement.CONSTANT(Constant(c)))
+            case c:
+                raise TypeError(f"Cannot build constant graph from type {type(c)}")
+
+    def __str__(self):
+        return str(self.value)
