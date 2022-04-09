@@ -1,6 +1,6 @@
 from functools import reduce
 
-from graph import GraphElement, Graph
+from graph import Graph
 
 
 def raise_exception(e: Exception):

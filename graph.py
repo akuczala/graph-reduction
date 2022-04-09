@@ -35,8 +35,8 @@ class Constant(GraphElementValue):
             print(f"encountered constant {self.value}. Should be done.")
         stack.pop()
 
-    def equals_literal(self, other: "Constant") -> bool:
-        return self.value == other.value
+    def equals_literal(self, other) -> bool:
+        return self == other
 
 
 class Combinator(GraphElementValue):
@@ -57,8 +57,8 @@ class Combinator(GraphElementValue):
             for _ in range(self.n_args):
                 stack.pop()
 
-    def equals_literal(self, other: "Combinator") -> bool:
-        return type(self) == type(other)
+    def equals_literal(self, other) -> bool:
+        return self == other
 
     @abstractmethod
     def eval(self, stack):
@@ -72,6 +72,9 @@ class Combinator(GraphElementValue):
     def __str__(self) -> str:
         return self.to_string()
 
+    def __eq__(self, other):
+        return isinstance(other, Combinator) and type(self) == type(other)
+
 
 @dataclass(frozen=True)
 class Node(GraphElementValue):
@@ -81,10 +84,12 @@ class Node(GraphElementValue):
     def eval_and_update_stack(self, stack):
         stack.push(self.function_slot)
 
-    def equals_literal(self, other: "Node") -> bool:
+    def equals_literal(self, other) -> bool:
+        if not isinstance(other, Node):
+            return False
         return (
-                self.function_slot.value.equals_literal(other.function_slot.value) and
-                self.argument_slot.value.equals_literal(other.argument_slot.value)
+                self.function_slot.equals_literal(other.function_slot) and
+                self.argument_slot.equals_literal(other.argument_slot)
         )
 
     def __str__(self) -> str:
@@ -94,8 +99,6 @@ class Node(GraphElementValue):
 T = TypeVar('T')
 
 
-# todo: figure out how references work here. Might want to make GraphElementValue an ADT instead
-# we want to be able to "swap out" different ADT instances at the same place in memory
 @adt
 class GraphElement:
     CONSTANT: Case[Constant]
@@ -116,7 +119,7 @@ class GraphElement:
     def equals_literal(self, other: "GraphElement") -> bool:
         eq = lambda s1, s2: s1.equals_literal(s2)
         eqs: Callable[[GraphElementValue], bool] = lambda s: other.match(
-            constant=partial(eq)(s), combinator=partial(eq)(s), node=partial(eq)(s)
+            constant=partial(eq, s), combinator=partial(eq, s), node=partial(eq, s)
         )
         return self.match(
             constant=eqs, combinator=eqs, node=eqs
@@ -176,10 +179,13 @@ class Graph(Box[GraphElement]):
         match constant:
             case Constant(_) as c:
                 return cls(GraphElement.CONSTANT(c))
-            case c if isinstance(c, ConstantType):
+            case c if isinstance(c, ConstantType) or isinstance(c, int):
                 return cls(GraphElement.CONSTANT(Constant(c)))
             case c:
                 raise TypeError(f"Cannot build constant graph from type {type(c)}")
+
+    def equals_literal(self, other: "Graph") -> bool:
+        return self.value.equals_literal(other.value)
 
     def __str__(self):
         return str(self.value)

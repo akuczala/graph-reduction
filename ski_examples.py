@@ -6,6 +6,7 @@ s = Graph.new(S)
 k = Graph.new(K)
 i = Graph.new(I)
 
+
 def graph_example_1():
     ge0 = Graph.new_node(k, k)
     ge1 = Graph.new_node(ge0, i)
@@ -14,7 +15,7 @@ def graph_example_1():
 
 
 def graph_example_2():
-    return la(S, K, K, 5)
+    return la(s, k, k, Graph.new(5))
 
 
 def graph_example_3():
