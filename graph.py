@@ -1,121 +1,28 @@
-from abc import abstractmethod
-from dataclasses import dataclass
 from functools import partial
-from typing import TypeVar, Callable, Union, Type, Dict, cast
+from typing import TypeVar, Callable, Union, Type, Dict
 
 from adt import adt, Case
 
 from box import Box
+from graph_data_types import EqualsLiteralMixin, GraphElementValue, ConstantType, Constant, Combinator, Node
+from stack import Stack
 
 V = TypeVar('V', bound="GraphElementValue")
-
-
-class GraphElementValue:
-    @abstractmethod
-    def eval_and_update_stack(self, stack) -> None:
-        pass
-
-    @abstractmethod
-    def equals_literal(self: V, other: V) -> bool:
-        pass
-
-
-ConstantType = float
-
-
-@dataclass(frozen=True)
-class Constant(GraphElementValue):
-    value: ConstantType
-
-    def __str__(self) -> str:
-        return str(self.value)
-
-    def eval_and_update_stack(self, stack) -> None:
-        if stack.verbose:
-            print(f"encountered constant {self.value}. Should be done.")
-        stack.pop()
-
-    def equals_literal(self, other) -> bool:
-        return self == other
-
-
-class Combinator(GraphElementValue):
-
-    @property
-    @abstractmethod
-    def n_args(self) -> int:
-        pass
-
-    def eval_and_update_stack(self, stack) -> None:
-        if len(stack) < self.n_args + 1:
-            if stack.verbose:
-                print(f"{self.to_string()} only provided {len(stack) - 1} arguments.")
-            stack.clear()
-            return
-        else:
-            self.eval(stack)
-            for _ in range(self.n_args):
-                stack.pop()
-
-    def equals_literal(self, other) -> bool:
-        return self == other
-
-    @abstractmethod
-    def eval(self, stack):
-        pass
-
-    @classmethod
-    @abstractmethod
-    def to_string(cls) -> str:
-        pass
-
-    def __str__(self) -> str:
-        return self.to_string()
-
-    def __eq__(self, other):
-        return isinstance(other, Combinator) and type(self) == type(other)
-
-
-@dataclass(frozen=True)
-class Node(GraphElementValue):
-    function_slot: "Graph"
-    argument_slot: "Graph"
-
-    def eval_and_update_stack(self, stack) -> None:
-        stack.push(self.function_slot)
-
-    def equals_literal(self, other) -> bool:
-        if not isinstance(other, Node):
-            return False
-        return (
-                self.function_slot.equals_literal(other.function_slot) and
-                self.argument_slot.equals_literal(other.argument_slot)
-        )
-
-    def __str__(self) -> str:
-        return f"[{self.function_slot} | {self.argument_slot}]"
-
-
 T = TypeVar('T')
 
 
 @adt
-class GraphElement:
+class GraphElement(EqualsLiteralMixin):
     CONSTANT: Case[Constant]
     COMBINATOR: Case[Combinator]
-    NODE: Case[Node]
+    NODE: Case[Node["Graph"]]
 
-    def eval_and_update_stack(self, stack) -> None:
+    def eval_and_update_stack(self, stack: Stack["Graph"]) -> None:
         self.apply_to_any(lambda gv: gv.eval_and_update_stack(stack))
 
     def equals_literal(self, other: "GraphElement") -> bool:
         eq = lambda s1, s2: s1.equals_literal(s2)
-        eqs: Callable[[GraphElementValue], bool] = lambda s: other.match(
-            constant=partial(eq, s), combinator=partial(eq, s), node=partial(eq, s)
-        )
-        return self.match(
-            constant=eqs, combinator=eqs, node=eqs
-        )
+        return self.apply_to_any(lambda s: other.apply_to_any(partial(eq, s)))
 
     def apply_to_any(self, f: Callable[[GraphElementValue], T]) -> T:
         return self.match(
@@ -146,7 +53,7 @@ class GraphElement:
         return self.apply_to_any(str)
 
 
-class Graph(Box[GraphElement]):
+class Graph(Box[GraphElement], EqualsLiteralMixin):
 
     def __init__(self, value: GraphElement):
         super().__init__(value)

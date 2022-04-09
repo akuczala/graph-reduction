@@ -9,7 +9,7 @@ class Stack(Generic[T]):
         self.stack: List[T] = []
         self.verbose = verbose
 
-    def push(self, value: T) -> Stack:
+    def push(self, value: T) -> Stack[T]:
         self.stack.append(value)
         return self
 

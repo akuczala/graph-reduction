@@ -1,4 +1,5 @@
-from graph import GraphElement, Graph, Constant
+from graph import GraphElement, Graph
+from graph_data_types import Constant
 from ski import I, K
 
 
