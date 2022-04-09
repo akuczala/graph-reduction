@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from graph import GraphElement, Graph
+from graph import Graph
 from stack import Stack
 
 
@@ -22,11 +22,7 @@ class VeryLazyEvaluator(Evaluator):
 
     def eval_stack(self, stack: Stack) -> Stack:
         while len(stack) > 0:
-            stack.peek().value.match(
-                node=lambda n: stack.push(n.function_slot),
-                combinator=lambda c: c.eval_and_update_stack(stack),
-                constant=lambda c: c.eval_and_update_stack(stack)
-            )
+            stack.peek().value.eval_and_update_stack(stack)
             if stack.verbose:
                 print(stack)
                 print('-----')

@@ -12,7 +12,7 @@ V = TypeVar('V', bound="GraphElementValue")
 
 class GraphElementValue:
     @abstractmethod
-    def eval_and_update_stack(self, stack):
+    def eval_and_update_stack(self, stack) -> None:
         pass
 
     @abstractmethod
@@ -30,7 +30,7 @@ class Constant(GraphElementValue):
     def __str__(self) -> str:
         return str(self.value)
 
-    def eval_and_update_stack(self, stack):
+    def eval_and_update_stack(self, stack) -> None:
         if stack.verbose:
             print(f"encountered constant {self.value}. Should be done.")
         stack.pop()
@@ -46,7 +46,7 @@ class Combinator(GraphElementValue):
     def n_args(self) -> int:
         pass
 
-    def eval_and_update_stack(self, stack):
+    def eval_and_update_stack(self, stack) -> None:
         if len(stack) < self.n_args + 1:
             if stack.verbose:
                 print(f"{self.to_string()} only provided {len(stack) - 1} arguments.")
@@ -81,7 +81,7 @@ class Node(GraphElementValue):
     function_slot: "Graph"
     argument_slot: "Graph"
 
-    def eval_and_update_stack(self, stack):
+    def eval_and_update_stack(self, stack) -> None:
         stack.push(self.function_slot)
 
     def equals_literal(self, other) -> bool:
@@ -105,16 +105,8 @@ class GraphElement:
     COMBINATOR: Case[Combinator]
     NODE: Case[Node]
 
-    def eval_and_update_stack(self, stack):
-        self.value.eval_and_update_stack(stack)
-
-    @property
-    def _default_expect_value_exceptions(self) -> Dict[str, Callable[[GraphElementValue], Exception]]:
-        return dict(
-            node=lambda n: ValueError(f"Did not expect node {n}"),
-            combinator=lambda c: ValueError(f"Did not expect combinator {c}"),
-            constant=lambda c: ValueError(f"Did not expect constant {c}")
-        )
+    def eval_and_update_stack(self, stack) -> None:
+        self.apply_to_any(lambda gv: gv.eval_and_update_stack(stack))
 
     def equals_literal(self, other: "GraphElement") -> bool:
         eq = lambda s1, s2: s1.equals_literal(s2)
@@ -125,11 +117,17 @@ class GraphElement:
             constant=eqs, combinator=eqs, node=eqs
         )
 
-    def __str__(self) -> str:
+    def apply_to_any(self, f: Callable[[GraphElementValue], T]) -> T:
         return self.match(
-            constant=str,
-            combinator=str,
-            node=str
+            constant=f, combinator=f, node=f
+        )
+
+    @property
+    def _default_expect_value_exceptions(self) -> Dict[str, Callable[[GraphElementValue], Exception]]:
+        return dict(
+            node=lambda n: ValueError(f"Did not expect node {n}"),
+            combinator=lambda c: ValueError(f"Did not expect combinator {c}"),
+            constant=lambda c: ValueError(f"Did not expect constant {c}")
         )
 
     def expect_value(self,
@@ -143,6 +141,9 @@ class GraphElement:
             raise result
         else:
             return result
+
+    def __str__(self) -> str:
+        return self.apply_to_any(str)
 
 
 class Graph(Box[GraphElement]):
@@ -163,7 +164,6 @@ class Graph(Box[GraphElement]):
                 return cls.new_combinator(s())  # type: ignore
             case s if isinstance(s, ConstantType) or isinstance(s, int):
                 return cls.new_constant(s)
-            # had to take this out of case _: to make mypy happy
         raise NotImplementedError(f"Cannot instantiate GraphElement with {arg} of type {type(arg)}.")
 
     @classmethod
