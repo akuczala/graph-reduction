@@ -1,31 +1,31 @@
 from abc import ABC, abstractmethod
 
-from graph import GraphElement
-from stack import SpineStack
+from graph import GraphElement, Graph
+from stack import Stack
 
 
 class Evaluator(ABC):
 
     @abstractmethod
-    def evaluate(self, graph: GraphElement, verbose=False) -> GraphElement:
+    def evaluate(self, graph: Graph, verbose=False) -> Graph:
         pass
 
     @abstractmethod
-    def eval_stack(self, stack: SpineStack) -> SpineStack:
+    def eval_stack(self, stack: Stack) -> Stack:
         pass
 
 
 class VeryLazyEvaluator(Evaluator):
-    def evaluate(self, graph: GraphElement, verbose=False) -> GraphElement:
-        self.eval_stack(SpineStack(verbose=verbose).push(graph))
+    def evaluate(self, graph: Graph, verbose=False) -> Graph:
+        self.eval_stack(Stack[Graph](verbose=verbose).push(graph))
         return graph
 
-    def eval_stack(self, stack: SpineStack) -> SpineStack:
+    def eval_stack(self, stack: Stack) -> Stack:
         while len(stack) > 0:
-            stack.peek().match_value(
-                on_node=lambda n: stack.push(n.function_slot),
-                on_combinator=lambda c: c.eval_and_update_stack(stack),
-                on_constant=lambda c: c.eval_and_update_stack(stack)
+            stack.peek().value.match(
+                node=lambda n: stack.push(n.function_slot),
+                combinator=lambda c: c.eval_and_update_stack(stack),
+                constant=lambda c: c.eval_and_update_stack(stack)
             )
             if stack.verbose:
                 print(stack)

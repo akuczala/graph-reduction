@@ -1,5 +1,5 @@
 from evaluator import VeryLazyEvaluator
-from ski_examples import graph_example_4, graph_example_3
+from ski_examples import graph_example_4, graph_example_3, graph_example_1, graph_example_1_spelled_out
 
 
 def init_test():

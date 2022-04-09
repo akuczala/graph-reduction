@@ -5,14 +5,12 @@ from typing import TypeVar, Callable, Union, Type, Dict, cast, Optional
 
 from adt import adt, Case
 
+from box import Box
+
 V = TypeVar('V', bound="GraphElementValue")
 
 
-class ValueType(ABC):
-    pass
-
-
-class GraphElementValue(ValueType):
+class GraphElementValue:
     @abstractmethod
     def eval_and_update_stack(self, stack):
         pass
@@ -74,14 +72,14 @@ class Combinator(GraphElementValue):
 
 @dataclass(frozen=True)
 class Node(GraphElementValue):
-    function_slot: "GraphElement"
-    argument_slot: "GraphElement"
+    function_slot: Box["GraphElement"]
+    argument_slot: Box["GraphElement"]
 
     @classmethod
     def new(cls, in_function_slot, in_argument_slot) -> "Node":
         return cls(
-            function_slot=GraphElement.new(in_function_slot),
-            argument_slot=GraphElement.new(in_argument_slot)
+            function_slot=Box(GraphElement.new(in_function_slot)),
+            argument_slot=Box(GraphElement.new(in_argument_slot))
         )
 
     def eval_and_update_stack(self, stack):
@@ -89,8 +87,8 @@ class Node(GraphElementValue):
 
     def equals_literal(self, other: "Node") -> bool:
         return (
-                self.function_slot.equals_literal(other.function_slot) and
-                self.argument_slot.equals_literal(other.argument_slot)
+                self.function_slot.value.equals_literal(other.function_slot.value) and
+                self.argument_slot.value.equals_literal(other.argument_slot.value)
         )
 
     def __str__(self) -> str:
@@ -139,11 +137,11 @@ class GraphElement:
         self.value.eval_and_update_stack(stack)
 
     @property
-    def _default_expect_value_exceptions(self) -> Dict[str, Callable[[ValueType], Exception]]:
+    def _default_expect_value_exceptions(self) -> Dict[str, Callable[[GraphElementValue], Exception]]:
         return dict(
-            on_node=lambda n: ValueError(f"Did not expect node {n}"),
-            on_combinator=lambda c: ValueError(f"Did not expect combinator {c}"),
-            on_constant=lambda c: ValueError(f"Did not expect constant {c}")
+            node=lambda n: ValueError(f"Did not expect node {n}"),
+            combinator=lambda c: ValueError(f"Did not expect combinator {c}"),
+            constant=lambda c: ValueError(f"Did not expect constant {c}")
         )
 
     def equals_literal(self, other: "GraphElement") -> bool:
@@ -162,21 +160,17 @@ class GraphElement:
             node=str
         )
 
-    def match_value(self, on_constant, on_combinator, on_node) -> T:
-        return self.match(
-            constant=on_constant,
-            combinator=on_combinator,
-            node=on_node
-        )
-
     def expect_value(self,
-                     **kwargs: Callable[[ValueType], Union[T, Exception]]) -> T:
+                     **kwargs: Callable[[GraphElementValue], Union[T, Exception]]) -> T:
         """
         Raises error if we match on something we don't specify a lambda for. Error messages can be customized
         by passing lambdas that return Exceptions
         """
-        result: T = self.match_value(**dict(self._default_expect_value_exceptions, **kwargs))
+        result: T = self.match(**dict(self._default_expect_value_exceptions, **kwargs))
         if isinstance(result, Exception):
             raise result
         else:
             return result
+
+
+Graph = Box[GraphElement]
