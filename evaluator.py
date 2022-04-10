@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from functools import partial
 
 from graph import Graph, GraphElement
 from graph_data_types import Constant, Combinator, Node
@@ -37,7 +36,6 @@ class VeryLazyEvaluator(Evaluator):
             node=lambda n: self.eval_node(stack, n),
         )
 
-
     @staticmethod
     def eval_constant(stack: Stack[Graph], constant: Constant) -> None:
         if stack.verbose:
@@ -52,7 +50,7 @@ class VeryLazyEvaluator(Evaluator):
             stack.clear()
             return
         else:
-            combinator.eval(stack)
+            combinator.eval(stack.peek_at_last(combinator.n_args + 1)[:-1])
             for _ in range(combinator.n_args):
                 stack.pop()
 

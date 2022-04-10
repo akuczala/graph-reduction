@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import TypeVar, Generic
+from typing import TypeVar, Generic, List, TYPE_CHECKING
 
-from stack import Stack
+if TYPE_CHECKING:
+    from graph import Graph
 
 S = TypeVar('S', bound="EqualsLiteralMixin")
 
@@ -42,7 +43,7 @@ class Combinator(GraphElementValue):
         return self == other
 
     @abstractmethod
-    def eval(self, stack: Stack):
+    def eval(self, args: List["Graph"]):
         pass
 
     @classmethod

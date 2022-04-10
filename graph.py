@@ -1,5 +1,5 @@
 from functools import partial
-from typing import TypeVar, Callable, Union, Type, Dict, NoReturn, Optional
+from typing import TypeVar, Callable, Union, Type, Dict, Optional
 
 from adt import adt, Case
 
@@ -33,7 +33,7 @@ class GraphElement(EqualsLiteralMixin):
             constant=lambda c: ValueError(f"Did not expect constant {c}")
         )
 
-    def expect_value(self,
+    def expect_match(self,
                      node: Optional[Callable[[Node], Union[T, Exception]]] = None,
                      combinator: Optional[Callable[[Combinator], Union[T, Exception]]] = None,
                      constant: Optional[Callable[[Constant], Union[T, Exception]]] = None) -> T:
