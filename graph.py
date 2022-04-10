@@ -1,11 +1,10 @@
 from functools import partial
-from typing import TypeVar, Callable, Union, Type, Dict
+from typing import TypeVar, Callable, Union, Type, Dict, NoReturn, Optional
 
 from adt import adt, Case
 
 from box import Box
 from graph_data_types import EqualsLiteralMixin, GraphElementValue, ConstantType, Constant, Combinator, Node
-from stack import Stack
 
 V = TypeVar('V', bound="GraphElementValue")
 T = TypeVar('T')
@@ -15,10 +14,7 @@ T = TypeVar('T')
 class GraphElement(EqualsLiteralMixin):
     CONSTANT: Case[Constant]
     COMBINATOR: Case[Combinator]
-    NODE: Case[Node["Graph"]]
-
-    def eval_and_update_stack(self, stack: Stack["Graph"]) -> None:
-        self.apply_to_any(lambda gv: gv.eval_and_update_stack(stack))
+    NODE: Case[Node]  # Explicitly using Node[Graph] here makes the adt mypy plugin unhappy
 
     def equals_literal(self, other: "GraphElement") -> bool:
         eq = lambda s1, s2: s1.equals_literal(s2)
@@ -38,12 +34,18 @@ class GraphElement(EqualsLiteralMixin):
         )
 
     def expect_value(self,
-                     **kwargs: Callable[[GraphElementValue], Union[T, Exception]]) -> T:
+                     node: Optional[Callable[[Node], Union[T, Exception]]] = None,
+                     combinator: Optional[Callable[[Combinator], Union[T, Exception]]] = None,
+                     constant: Optional[Callable[[Constant], Union[T, Exception]]] = None) -> T:
         """
         Raises error if we match on something we don't specify a lambda for. Error messages can be customized
         by passing lambdas that return Exceptions
         """
-        result: T = self.match(**dict(self._default_expect_value_exceptions, **kwargs))
+        result: Union[T, Exception] = self.match(
+            node=(node if node is not None else self._default_expect_value_exceptions['node']),
+            combinator=(combinator if combinator is not None else self._default_expect_value_exceptions['combinator']),
+            constant=(constant if constant is not None else self._default_expect_value_exceptions['constant'])
+        )
         if isinstance(result, Exception):
             raise result
         else:
